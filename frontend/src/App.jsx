@@ -20,7 +20,7 @@ import MatrixAndAlerts from './components/MatrixAndAlerts';
 import ExcelImporter from './components/ExcelImporter';
 import AdminPanel from './components/AdminPanel';
 
-export const API_URL = 'http://localhost:5000/api';
+export const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5000/api' : '/api';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '');

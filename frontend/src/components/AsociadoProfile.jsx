@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { API_URL } from '../App';
 
+const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5000' : '';
+
 export default function AsociadoProfile({ token, user, asociadoId, navigateTo }) {
   const [asoc, setAsoc] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -462,7 +464,7 @@ export default function AsociadoProfile({ token, user, asociadoId, navigateTo })
 
                       <div className="flex items-center space-x-1.5 shrink-0">
                         <a
-                          href={`http://localhost:5000${doc.archivoUrl}`}
+                          href={`${BACKEND_URL}${doc.archivoUrl}`}
                           target="_blank"
                           rel="noreferrer"
                           title="Descargar / Ver"
