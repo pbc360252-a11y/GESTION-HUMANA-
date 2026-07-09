@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: gestion-humana
+    runtime: node
+    buildCommand: "./build.sh"
+    startCommand: "node backend/src/index.js"
+    envVars:
+      - key: NODE_ENV
+        value: production
