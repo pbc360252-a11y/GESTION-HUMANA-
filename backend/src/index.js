@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { PrismaClient } = require('@prisma/client');
 
 // Importar rutas
 const authRoutes = require('./routes/authRoutes');
@@ -69,9 +70,19 @@ app.use((err, req, res, next) => {
 iniciarCronAlertas();
 
 // Iniciar servidor
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`==================================================`);
   console.log(`   HRM CORAZA SEGURIDAD CTA - BACKEND ACTIVO      `);
   console.log(`   Servidor escuchando en: http://localhost:${PORT} `);
   console.log(`==================================================`);
+
+  // Probar conexión a la base de datos al arrancar
+  const prisma = new PrismaClient();
+  try {
+    await prisma.$connect();
+    console.log(`[DB] ✅ Conexión a la base de datos exitosa`);
+    await prisma.$disconnect();
+  } catch (error) {
+    console.error(`[DB] ❌ Error de conexión a la base de datos:`, error.message);
+  }
 });
