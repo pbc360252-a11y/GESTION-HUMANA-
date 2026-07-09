@@ -54,7 +54,7 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error('Error en el login:', error);
-    res.status(500).json({ mensaje: 'Error interno del servidor' });
+    res.status(500).json({ mensaje: 'Error interno del servidor', detalle: error.message });
   }
 };
 
@@ -70,7 +70,26 @@ const getMe = async (req, res) => {
   }
 };
 
+const status = async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ 
+      estado: 'OK', 
+      db: 'Conectada',
+      dbUrl: process.env.DATABASE_URL ? 'DATABASE_URL configurada ✓' : 'DATABASE_URL NO ENCONTRADA ✗'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      estado: 'ERROR', 
+      error: error.message,
+      dbUrl: process.env.DATABASE_URL ? 'DATABASE_URL configurada ✓' : 'DATABASE_URL NO ENCONTRADA ✗'
+    });
+  }
+};
+
 module.exports = {
   login,
   getMe,
+  status,
 };
+
