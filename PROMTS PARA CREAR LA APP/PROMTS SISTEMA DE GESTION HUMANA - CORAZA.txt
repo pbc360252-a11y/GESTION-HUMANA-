@@ -1,0 +1,758 @@
+SISTEMA DE GESTION HUMANA - CORAZA SEGURIDAD CTA
+DOCUMENTO DE ESPECIFICACION TECNICA Y PROMPT DE CONSTRUCCION
+Version 1.0 - Basado en analisis de PLANILLA_CONTROL_DE_INGRESO_ASOCIADOS_V15.xlsx
+
+=================================================================
+1. CONTEXTO DEL PROYECTO
+=================================================================
+
+Coraza Seguridad CTA (Cooperativa de Vigilancia y Seguridad Privada)
+gestiona actualmente el control de ingreso, permanencia y retiro de
+sus asociados (vigilantes, supervisores, personal administrativo)
+mediante un archivo Excel protegido con contrasena
+(PLANILLA_CONTROL_DE_INGRESO_ASOCIADOS_V15.xlsx) que contiene mas
+de 1300 registros historicos de ingresos y mas de 3600 registros
+de retiros repartidos en varias hojas.
+
+Este documento describe el software que reemplazara dicho Excel:
+una aplicacion web de Gestion Humana (HRM) hecha a la medida de
+Coraza Seguridad CTA, que digitaliza y estructura la informacion,
+automatiza alertas normativas (vencimiento de examenes, cursos,
+polizas) y permite trazabilidad completa del ciclo de vida del
+asociado (ingreso -> vida laboral -> retiro).
+
+-----------------------------------------------------------------
+1.1 Hojas de origen analizadas en el Excel
+-----------------------------------------------------------------
+
+  - INGRESOS                : ~1305 registros activos, 49 campos utiles
+  - RETIROS                 : ~2174 registros historicos
+  - RETIROS DESDE NOV 2015  : historico adicional de retiros
+  - RETIROS <2015           : historico de retiros anteriores a 2015
+  - ANALISIS RETIROS        : tabla dinamica / resumen de motivos de retiro
+  - LISTAS                  : catalogos maestros (listas desplegables)
+  - Hoja1, Hoja2, Hoja5, Hoja6 : datos de apoyo y validaciones cruzadas
+
+=================================================================
+2. OBJETIVO GENERAL
+=================================================================
+
+Construir una aplicacion web (HRM interno) que permita a Coraza
+Seguridad CTA:
+
+  1. Registrar y mantener la hoja de vida completa de cada asociado.
+  2. Controlar el cumplimiento normativo de cargos criticos y no
+     criticos (examenes psicofisicos, psicosensometricos, cursos
+     de reentrenamiento, polizas).
+  3. Gestionar el proceso de retiro (renuncia, exclusion,
+     fallecimiento, pension) con encuesta de salida.
+  4. Generar alertas automaticas de vencimientos.
+  5. Producir reportes y estadisticas (rotacion, motivos de
+     retiro, distribucion demografica, antiguedad, EPS, etc.).
+  6. Servir como fuente unica de verdad reemplazando el Excel,
+     con historial de auditoria (quien cambio que y cuando).
+
+=================================================================
+3. ALCANCE FUNCIONAL (MODULOS)
+=================================================================
+
+  M1. Modulo de Asociados (Ingresos)
+  M2. Modulo de Cargos Criticos y Cumplimiento Normativo
+  M3. Modulo de Retiros y Encuesta de Salida
+  M4. Modulo de Catalogos / Listas Maestras
+  M5. Modulo de Alertas y Notificaciones
+  M6. Modulo de Reportes y Analitica (dashboard)
+  M7. Modulo de Usuarios, Roles y Auditoria
+  M8. Modulo de Importacion/Migracion desde Excel
+
+=================================================================
+4. MODELO DE DATOS (ENTIDADES)
+=================================================================
+
+-----------------------------------------------------------------
+4.1 Entidad: ASOCIADO (tabla principal, nace de hoja INGRESOS)
+-----------------------------------------------------------------
+
+  id                                  UUID / PK interno
+  numero_carpeta_actual               INTEGER
+  acta                                VARCHAR   (ej: "ACTA 0016 - 30-04-2012")
+  tipo_documento                      VARCHAR   (CC, CE, PA...)
+  numero_identificacion               VARCHAR   UNIQUE
+  primer_apellido                     VARCHAR
+  segundo_apellido                    VARCHAR
+  primer_nombre                       VARCHAR
+  segundo_nombre                      VARCHAR
+  centro_trabajo                      VARCHAR   (codigo de zona/puesto)
+  fecha_nacimiento                    DATE
+  fecha_expedicion_cedula             DATE
+  correo_electronico                  VARCHAR
+  direccion                           VARCHAR
+  telefono_fijo                       VARCHAR
+  celular                             VARCHAR   (permitir multiples numeros)
+  contacto_emergencia_nombre          VARCHAR
+  contacto_emergencia_parentesco      VARCHAR
+  contacto_emergencia_telefono        VARCHAR
+  fecha_ingreso                       DATE
+  cargo_actual                        VARCHAR   (FK -> catalogo CARGOS)
+  es_cargo_critico                    BOOLEAN   (derivado del catalogo)
+  frecuencia_actualizacion_anios      INTEGER   (1 si critico, 2 si no critico)
+  psicofisico_vigente                 BOOLEAN
+  psicosensometrico_vigente           BOOLEAN
+  compensacion_ordinaria              DECIMAL
+  promedio_salarial_mensual           DECIMAL
+  eps                                 VARCHAR   (FK -> catalogo EPS)
+  fondo_pension                       VARCHAR   (FK -> catalogo FONDO_PENSION)
+  funeraria                           VARCHAR
+  tiene_poliza_sura                   BOOLEAN
+  cuenta_bancaria                     VARCHAR
+  codigo_curso                        VARCHAR
+  nit_escuela                         VARCHAR
+  numero_certificado_curso            VARCHAR
+  edad_ingreso                        DECIMAL   (calculado, no editable)
+  edad_actual                         DECIMAL   (calculado, no editable)
+  rh                                  VARCHAR   (FK -> catalogo RH)
+  sexo_al_nacer                       VARCHAR
+  genero                              VARCHAR   (FK -> catalogo GENERO)
+  orientacion_sexual                  VARCHAR   (FK -> catalogo)
+  religion                            VARCHAR   (FK -> catalogo)
+  estado_civil                        VARCHAR
+  numero_hijos                        INTEGER
+  personas_a_cargo                    INTEGER
+  tipo_vivienda                       VARCHAR   (PROPIA, ARRENDADA, FAMILIAR...)
+  estrato                             INTEGER
+  nivel_estudio                       VARCHAR
+  antiguedad_empresa_anios            DECIMAL   (calculado)
+  antiguedad_cargo_anios              DECIMAL   (calculado)
+  rango_ingresos                      VARCHAR   (ENTRE 1 Y 2 SMLV, etc.)
+  raza                                VARCHAR   (catalogo, campo sensible)
+  plan_de_vida                        VARCHAR
+  medio_transporte                    VARCHAR
+  tiempo_traslado                     VARCHAR
+  estado                              ENUM      (ACTIVO, RETIRADO, SUSPENDIDO)
+  created_at / updated_at / updated_by AUDITORIA
+
+  NOTA SOBRE DATOS SENSIBLES: campos como RAZA, ORIENTACION SEXUAL,
+  RELIGION, GENERO, ESTADO DE SALUD deben tratarse conforme a la Ley
+  1581 de 2012 (proteccion de datos personales) de Colombia: acceso
+  restringido por rol, encriptado en reposo si aplica, y con
+  consentimiento informado del asociado. Ver seccion 9 (RNF legal).
+
+-----------------------------------------------------------------
+4.2 Entidad: RETIRO (nace de hojas RETIROS / RETIROS DESDE NOV 2015 /
+    RETIROS <2015)
+-----------------------------------------------------------------
+
+  id                          UUID / PK
+  asociado_id                 FK -> ASOCIADO
+  ultimo_cargo                VARCHAR
+  fecha_retiro                DATE
+  anio_retiro                 INTEGER (calculado)
+  mes_retiro                  INTEGER (calculado)
+  motivo_renuncia             VARCHAR (FK -> catalogo MOTIVO_RETIRO)
+  razon_del_retiro             VARCHAR (FK -> catalogo RAZON_RETIRO)
+  liquidacion_estado          VARCHAR (OK, PENDIENTE...)
+  encuesta_ambiente_fisico    VARCHAR (calificacion 1-5)
+  encuesta_induccion          VARCHAR (calificacion 1-5)
+  encuesta_reinduccion        VARCHAR (calificacion 1-5)
+  encuesta_capacitacion       VARCHAR (calificacion 1-5)
+  encuesta_motivacion_grupo   VARCHAR (calificacion 1-5)
+  encuesta_reconocimiento     VARCHAR (calificacion 1-5)
+  encuesta_compensaciones     VARCHAR (calificacion 1-5)
+  que_menos_le_gustaba        VARCHAR (catalogo + texto libre)
+  volveria_a_trabajar         BOOLEAN / VARCHAR (SI/NO/N-A)
+  edad_al_retiro               DECIMAL (calculado)
+  observaciones               TEXT
+  created_at / updated_at / updated_by  AUDITORIA
+
+-----------------------------------------------------------------
+4.3 Entidad: CARGO (catalogo)
+-----------------------------------------------------------------
+
+  id, nombre_cargo, es_critico (BOOLEAN),
+  frecuencia_actualizacion_anios (1 o 2), activo (BOOLEAN)
+
+  Cargos identificados en el Excel (no exhaustivo, ampliable):
+  VIGILANTE, VIGIL MED TECNOL, VIGIL JEFE PUESTO, VIGIL CON ARMA,
+  SUPERVISOR, SUPERVISOR DE ALARMAS, SUPERVISOR C,
+  COORDINADOR OPERATIVO, COORDINADORES OPERATIVOS,
+  EJECUTIVO DE SERVICIO AL CLIENTE, PROGRAMADOR, ESCOLTA,
+  ESCOLTAS, TESORERO, AUX CONTABLE, RESPONSABLE SST,
+  DIR GESTION HUMANA, DIR OPERATIVO, DIR COMERCIAL,
+  ASISTENTE OPERACIONES, ASISTENTE GESTION HUMANA, GERENTE,
+  RECEPCIONISTA, COORDINADOR SEGURIDAD ELECTRONICA,
+  TECNICO SEG ELECTRONICA, ANALISTA CARTERA,
+  AUXILIAR ADMINISTRATIVO, ANALISTA SEGURIDAD ELECTRONICA,
+  OPERADOR DE MEDIO TECNOLOGICO, ASESOR COMERCIAL,
+  DIRECTORA COMERCIAL, DIRECTOR OPERATIVO, CONTADOR,
+  COORDINADORA TALENTO HUMANO, COORDINADORA SST,
+  ASISTENTE DE TALENTO HUMANO, SERVICIOS GENERALES.
+
+  Regla de negocio clave:
+    - Cargo CRITICO         -> reentrenamiento/examenes cada 1 anio
+    - Cargo NO CRITICO       -> reentrenamiento/examenes cada 2 anios
+    (parametrizable desde el modulo de configuracion, no hardcodeado)
+
+-----------------------------------------------------------------
+4.4 Entidad: CATALOGOS MAESTROS (tabla generica tipo key-value o
+    tablas independientes por tipo, a decision del arquitecto)
+-----------------------------------------------------------------
+
+  EPS: SURA, COOSALUD, NUEVA EPS, FOSYGA, SALUD TOTAL, SANITAS EPS,
+       SAVIA SALUD, CAJACOPI, MUTUAL SER, FAMISANAR, ASMET SALUD,
+       EPS FAMILIAR DE COLOMBIA SAS
+
+  FONDO_PENSION: COLPENSIONES, PROTECCION, PORVENIR, COLFONDOS,
+       HORIZONTE, PENSIONADO, ING PENSIONES Y CESANTIAS
+
+  RH: A+, A-, O+, O-, B+, B-, AB+, AB-
+
+  GENERO: HOMBRE, MUJER, NO BINARIO, TRANSGENERO, PREFIERO NO DECIR
+
+  ORIENTACION_SEXUAL: HETEROSEXUAL, HOMOSEXUAL, BISEXUAL, ASEXUAL,
+       OTRO, PREFIERO NO DECIR
+
+  RELIGION: CATOLICA, PROTESTANTE, JUDIA, MUSULMANA, OTRO,
+       PREFIERO NO DECIR
+
+  RAZA: MESTIZO, AFROCOLOMBIANO, INDIGENA, ROM, PALENQUERO, RAIZAL
+
+  MOTIVO_RETIRO: Voluntaria, Exclusion, Fallecimiento, Pension,
+       Demasiada presion o estres, Ambiente fisico de trabajo,
+       Incumplimiento de lo ofrecido, Problemas con jefe directo,
+       Falta de oportunidad, Falta de motivacion de grupo,
+       Horario de trabajo, Falta de acompanamiento inicial,
+       Relaciones laborales, Mejoras laborales, Necesidad economica
+
+  RAZON_RETIRO: Baja remuneracion, Problemas personales,
+       Enfermedad, Falta de reconocimiento, Cumplimiento
+       programacion, Incumplimiento programacion, Ubicacion puesto
+       de trabajo, Induccion/Capacitacion, Trato diferente o
+       discriminacion, Falta de induccion/capacitacion, Otros
+
+  MEDIO_TRANSPORTE: BICICLETA, SERVICIO PUBLICO, MOTO, CARRO, A PIE,
+       OTRO
+
+  TIEMPO_TRASLADO: MENOS DE 10 MINUTOS, DE 10 A 30 MINUTOS,
+       DE 30 MIN A 1 HORA, ENTRE 1 Y 2 HORAS, MAS DE 2 HORAS
+
+  TIPO_VIVIENDA: PROPIA, ARRENDADA, FAMILIAR, COMPARTIDA
+
+  NIVEL_ESTUDIO: BACHILLER, TECNICO, TECNOLOGO, PROFESIONAL
+
+  RANGO_INGRESOS: MENOS DE 1 SMLV, ENTRE 1 Y 2 SMLV,
+       ENTRE 2 Y 4 SMLV, MAS DE 5 SMLV
+
+-----------------------------------------------------------------
+4.5 Entidad: CENTRO_DE_TRABAJO / PUESTO
+-----------------------------------------------------------------
+
+  id, codigo (numerico segun el Excel, ej "01".."43"), nombre_cliente,
+  direccion, zona, activo
+
+-----------------------------------------------------------------
+4.6 Entidad: DOCUMENTO_ASOCIADO (adjuntos)
+-----------------------------------------------------------------
+
+  id, asociado_id, tipo_documento (CEDULA, CERTIFICADO_CURSO,
+  EXAMEN_PSICOFISICO, EXAMEN_PSICOSENSOMETRICO, POLIZA_SURA,
+  CONTRATO, ACTA, OTRO), archivo_url, fecha_vencimiento,
+  fecha_carga, cargado_por
+
+-----------------------------------------------------------------
+4.7 Entidad: ALERTA
+-----------------------------------------------------------------
+
+  id, asociado_id, tipo_alerta (VENCIMIENTO_CURSO,
+  VENCIMIENTO_PSICOFISICO, VENCIMIENTO_PSICOSENSOMETRICO,
+  VENCIMIENTO_POLIZA, DOCUMENTO_FALTANTE), fecha_generacion,
+  fecha_vencimiento, dias_restantes (calculado), estado
+  (PENDIENTE, NOTIFICADA, RESUELTA), asignado_a
+
+-----------------------------------------------------------------
+4.8 Entidad: USUARIO / ROL / AUDITORIA
+-----------------------------------------------------------------
+
+  USUARIO: id, nombre, correo, hash_password, rol_id, activo,
+           ultimo_login
+  ROL: id, nombre (ADMIN, GESTION_HUMANA, SST, COORDINADOR,
+       CONSULTA_SOLO_LECTURA), permisos (JSON o tabla pivote)
+  AUDITORIA: id, usuario_id, entidad, entidad_id, accion
+       (CREAR/EDITAR/ELIMINAR/EXPORTAR), campo_modificado,
+       valor_anterior, valor_nuevo, fecha, ip
+
+=================================================================
+5. REGLAS DE NEGOCIO CLAVE (extraidas del Excel)
+=================================================================
+
+  RN1. Si el cargo es CRITICO, la frecuencia de actualizacion de
+       examenes/certificaciones es de 1 anio; si es NO CRITICO,
+       cada 2 anios. Este valor debe ser configurable, no
+       hardcodeado, porque el Excel lo trae como parametro editable.
+
+  RN2. edad_ingreso = (fecha_ingreso - fecha_nacimiento) en anios,
+       calculado automaticamente, nunca digitado.
+
+  RN3. edad_actual = (hoy - fecha_nacimiento) en anios, recalculado
+       en cada consulta (campo derivado, no se persiste como
+       verdad absoluta o se recalcula via job diario).
+
+  RN4. antiguedad_empresa_anios = (hoy - fecha_ingreso) en anios.
+
+  RN5. Cuando un asociado se retira, el registro se mueve
+       logicamente de estado ACTIVO a RETIRADO (no se borra), se
+       crea un registro en RETIRO enlazado por asociado_id, y se
+       congela el historial del ASOCIADO (no se debe seguir
+       calculando antiguedad/edad activa sino "edad al retiro").
+
+  RN6. El sistema debe generar automaticamente una alerta cuando
+       falten <= 60, <=30 y <=7 dias para el vencimiento de un
+       examen, curso o poliza, segun la frecuencia definida en RN1.
+
+  RN7. El numero de identificacion es unico. No se pueden crear
+       dos asociados activos con el mismo numero de identificacion.
+       Si un ex-asociado reingresa, se debe reactivar su registro
+       historico (nuevo numero de carpeta), no duplicarlo.
+
+  RN8. Los campos EPS, FONDO_PENSION, GENERO, ORIENTACION_SEXUAL,
+       RELIGION, RAZA, RH deben ser seleccionados desde catalogos
+       cerrados (dropdown), nunca texto libre, para evitar
+       inconsistencias como las observadas en el Excel original
+       (ej: "SAN JUAN BAUTISTA", "SAN JUAB BAUTISTA", "SAN JUAN
+       BAUITISTA" como funeraria mal escrita en multiples formas).
+
+  RN9. La encuesta de retiro (M3) se debe diligenciar en el
+       momento del retiro y quedar bloqueada para edicion despues
+       de 30 dias, salvo por un usuario con rol ADMIN.
+
+  RN10. Debe existir una vista de "matriz de cumplimiento" que
+        cruce Asociado x Cargo x Fecha ultimo examen x Fecha
+        proximo vencimiento, para uso de SST y Gestion Humana.
+
+=================================================================
+6. ROLES Y PERMISOS (RBAC)
+=================================================================
+
+  ADMIN                 -> acceso total, configuracion de catalogos
+                            y reglas, gestion de usuarios.
+  GESTION_HUMANA         -> CRUD completo de asociados y retiros,
+                            reportes, sin acceso a configuracion
+                            del sistema.
+  SST (Seguridad y Salud -> gestion de examenes psicofisicos,
+       en el Trabajo)        psicosensometricos, alertas de
+                            vencimiento, matriz de cumplimiento.
+  COORDINADOR_OPERATIVO  -> lectura de asociados de sus centros de
+                            trabajo asignados, no ve datos
+                            sensibles completos (ej. religion,
+                            orientacion sexual ocultos).
+  CONSULTA               -> solo lectura de reportes agregados
+                            (sin datos personales identificables).
+
+=================================================================
+7. REQUISITOS FUNCIONALES (RF)
+=================================================================
+
+  RF01  Registrar nuevo asociado con validacion de campos
+        obligatorios (identificacion, nombres, fecha nacimiento,
+        fecha ingreso, cargo, centro de trabajo).
+  RF02  Editar datos de un asociado existente con registro de
+        auditoria por campo modificado.
+  RF03  Buscar/filtrar asociados por: numero identificacion,
+        nombre, cargo, centro de trabajo, EPS, estado, rango de
+        antiguedad, cargo critico si/no.
+  RF04  Ver ficha completa (hoja de vida digital) de un asociado
+        con timeline de eventos (ingreso, cambios de cargo,
+        examenes, alertas, retiro si aplica).
+  RF05  Adjuntar y visualizar documentos (cedula, examenes,
+        certificados, poliza) por asociado con fecha de
+        vencimiento cuando aplique.
+  RF06  Procesar el retiro de un asociado: cambia estado, solicita
+        motivo/razon, y habilita el formulario de encuesta de
+        salida.
+  RF07  Diligenciar encuesta de salida con escala de calificacion
+        1 a 5 en los items observados en el Excel (ambiente
+        fisico, induccion, reinduccion, capacitacion, motivacion
+        de grupo, reconocimiento, compensaciones) mas pregunta
+        abierta "que fue lo que menos le gusto" y "volveria a
+        trabajar en Coraza".
+  RF08  Generar automaticamente alertas de vencimiento segun RN6 y
+        mostrarlas en un panel de "Alertas activas" ordenadas por
+        urgencia.
+  RF09  Dashboard con indicadores: total activos, total retirados
+        (por periodo), rotacion de personal (%), distribucion por
+        EPS/genero/rango de edad/estado civil/nivel de estudio,
+        top 5 motivos de retiro, cargos con mas vencimientos
+        proximos.
+  RF10  Exportar reportes a Excel/PDF (listado filtrado, matriz de
+        cumplimiento, analisis de retiros).
+  RF11  Administrar catalogos maestros (CRUD de EPS, cargos,
+        fondos de pension, motivos de retiro, etc.) solo para rol
+        ADMIN.
+  RF12  Gestion de usuarios y roles (crear, desactivar, cambiar
+        rol) solo para rol ADMIN.
+  RF13  Importar historico desde el Excel actual (INGRESOS,
+        RETIROS, RETIROS DESDE NOV 2015, RETIROS <2015) mediante
+        un asistente de migracion con validacion y reporte de
+        errores/duplicados antes de confirmar la carga.
+  RF14  Registrar bitacora de auditoria de cada creacion, edicion
+        o eliminacion, visible para ADMIN.
+  RF15  Control de acceso por rol segun matriz de la seccion 6,
+        incluyendo ocultamiento de campos sensibles para roles sin
+        autorizacion.
+  RF16  Notificaciones por correo electronico (o en-app) cuando se
+        genere una alerta critica (<=7 dias para vencimiento).
+  RF17  Vista de "matriz de cumplimiento normativo" (RN10).
+  RF18  Historial de cambios de cargo/centro de trabajo de un
+        asociado (no solo el actual).
+
+=================================================================
+8. REQUISITOS NO FUNCIONALES (RNF)
+=================================================================
+
+  RNF01 Seguridad: autenticacion con contrasena hasheada (bcrypt o
+        argon2), sesiones con JWT o cookies seguras, HTTPS
+        obligatorio en produccion.
+  RNF02 Proteccion de datos personales conforme a la Ley 1581 de
+        2012 (Colombia) y Ley 594 de 2000 (gestion documental):
+        cifrado de campos sensibles en reposo, registro de
+        consentimiento, politica de retencion.
+  RNF03 Disponibilidad: la aplicacion debe operar en horario
+        laboral extendido (6:00 a 22:00) con backups diarios
+        automaticos de la base de datos.
+  RNF04 Escalabilidad: el modelo debe soportar crecimiento a mas
+        de 5000 asociados sin degradacion notable.
+  RNF05 Usabilidad: interfaz en espanol, responsive (uso desde
+        celular por coordinadores en campo), formularios con
+        validacion en tiempo real.
+  RNF06 Trazabilidad: ningun dato historico se elimina fisicamente
+        (soft delete + auditoria).
+  RNF07 Rendimiento: busquedas y filtros sobre el listado de
+        asociados deben responder en menos de 2 segundos con la
+        base de datos completa migrada (~1300+ registros activos,
+        ~3600+ historicos).
+  RNF08 Portabilidad: exportacion de datos en formatos abiertos
+        (CSV/XLSX) en cualquier momento, sin dependencia de
+        proveedor.
+
+=================================================================
+9. STACK TECNOLOGICO RECOMENDADO
+=================================================================
+
+  Backend       : Node.js + Express (coherente con otros
+                  desarrollos ya existentes de Coraza Seguridad,
+                  como el modulo "Suelo Legal y Gestion Documental")
+  ORM           : Prisma
+  Base de datos : PostgreSQL
+  Frontend      : React + Vite, Tailwind CSS
+  Autenticacion : JWT + bcrypt, RBAC por middleware
+  Reportes/export: exceljs (Excel), pdfkit o puppeteer (PDF)
+  Notificaciones: nodemailer (correo) + cron jobs (node-cron)
+                  para generar alertas diarias
+  Hosting sugerido: VPS o servicio administrado (Railway, Render,
+                  o servidor propio de la cooperativa)
+  Control de versiones: Git
+
+  Alternativa mas liviana (si se prefiere evitar servidor propio):
+  Google Apps Script + Google Sheets como backend, con un
+  frontend HTML Service, aprovechando que la fuente original ya
+  es una hoja de calculo y el equipo tiene experiencia previa con
+  este stack (como en SGD CORAZA y FREIMIRLEY). Recomendado solo
+  como MVP rapido; para volumen y controles de este modulo se
+  sugiere migrar a Node/Postgres en una segunda fase.
+
+=================================================================
+10. ARQUITECTURA PROPUESTA (ALTO NIVEL)
+=================================================================
+
+  [ React SPA ]  <--HTTPS/JSON-->  [ Express API ]  <-->  [ PostgreSQL ]
+                                          |
+                                          +--> [ Cron: alertas diarias ]
+                                          +--> [ Nodemailer: notificaciones ]
+                                          +--> [ Storage: documentos adjuntos ]
+                                          +--> [ Modulo de importacion Excel ]
+
+  Capas backend sugeridas:
+    routes/        -> definicion de endpoints REST
+    controllers/    -> logica de orquestacion
+    services/       -> reglas de negocio (RN1-RN10)
+    repositories/   -> acceso a datos via Prisma
+    middlewares/    -> auth, RBAC, validacion
+    jobs/           -> tareas programadas (alertas)
+
+=================================================================
+11. PLAN DE DESARROLLO SUGERIDO (SPRINTS)
+=================================================================
+
+  Sprint 0 (1 semana)  : Modelo de datos definitivo, catalogos,
+                         setup de repositorio y CI basico.
+  Sprint 1 (2 semanas) : Autenticacion, roles, CRUD de Asociados
+                         (RF01-RF04).
+  Sprint 2 (2 semanas) : Modulo de documentos y matriz de
+                         cumplimiento (RF05, RF17), motor de
+                         alertas (RF08, RN6).
+  Sprint 3 (2 semanas) : Modulo de Retiros y encuesta de salida
+                         (RF06, RF07, RN5, RN9).
+  Sprint 4 (2 semanas) : Dashboard y reportes/exportacion
+                         (RF09, RF10).
+  Sprint 5 (2 semanas) : Asistente de migracion desde Excel
+                         (RF13), pruebas con datos reales,
+                         auditoria (RF14).
+  Sprint 6 (1 semana)  : Notificaciones por correo (RF16),
+                         ajustes de UX, capacitacion a usuarios,
+                         despliegue a produccion.
+
+=================================================================
+12. PROMPT COMPLETO PARA GENERAR EL SOFTWARE CON IA
+=================================================================
+(Copiar y pegar el siguiente bloque completo en Claude Code, Cursor,
+o cualquier asistente de codigo para iniciar la construccion del
+proyecto de punta a punta)
+
+-----------------------------------------------------------------
+INICIO DEL PROMPT
+-----------------------------------------------------------------
+
+Actua como un arquitecto de software senior y desarrollador
+full-stack. Vas a construir desde cero un Sistema de Gestion
+Humana (HRM) para "Coraza Seguridad CTA", una cooperativa
+colombiana de vigilancia y seguridad privada. El sistema
+reemplaza una planilla de Excel que actualmente controla el
+ingreso, la vida laboral y el retiro de mas de 1300 asociados
+activos y mas de 3600 registros historicos de retiro.
+
+CONTEXTO DE NEGOCIO:
+- Los asociados pueden tener cargos CRITICOS (ej: GERENTE,
+  TESORERO, VIGIL CON ARMA, DIR GESTION HUMANA) o NO CRITICOS
+  (ej: VIGILANTE, SUPERVISOR, RECEPCIONISTA).
+- Los cargos criticos requieren renovacion de examenes
+  psicofisicos, psicosensometricos y cursos de reentrenamiento
+  cada 1 ano; los no criticos cada 2 anos. Este valor debe ser
+  configurable desde el sistema, no debe quedar fijo en el codigo.
+- Cuando un asociado se retira, se debe conservar todo su
+  historial (nunca borrar datos), registrar el motivo y la razon
+  del retiro, y aplicar una encuesta de salida con preguntas
+  cerradas de calificacion 1 a 5 (ambiente fisico, induccion,
+  reinduccion, capacitacion, motivacion de grupo, reconocimiento
+  a la labor, compensaciones/comisiones) mas dos preguntas
+  abiertas: que fue lo que menos le gusto, y si volveria a
+  trabajar en Coraza.
+- El sistema debe operar bajo la Ley 1581 de 2012 de Colombia
+  (proteccion de datos personales), por lo que campos sensibles
+  como religion, orientacion sexual, raza y genero deben tener
+  control de acceso estricto por rol.
+
+STACK TECNICO A USAR:
+- Backend: Node.js + Express + Prisma ORM
+- Base de datos: PostgreSQL
+- Frontend: React + Vite + Tailwind CSS
+- Autenticacion: JWT + bcrypt, con control de acceso basado en
+  roles (RBAC)
+- Tareas programadas: node-cron para generar alertas diarias de
+  vencimiento
+- Notificaciones: nodemailer para avisos por correo
+- Exportacion: exceljs para Excel, pdfkit o puppeteer para PDF
+
+MODELO DE DATOS A IMPLEMENTAR (Prisma schema):
+
+1. Asociado: numero_carpeta_actual, acta, tipo_documento,
+   numero_identificacion (unico), primer_apellido,
+   segundo_apellido, primer_nombre, segundo_nombre,
+   centro_trabajo_id (FK), fecha_nacimiento, fecha_expedicion_cedula,
+   correo_electronico, direccion, telefono_fijo, celular,
+   contacto_emergencia_nombre, contacto_emergencia_parentesco,
+   contacto_emergencia_telefono, fecha_ingreso, cargo_id (FK),
+   psicofisico_vigente (boolean), psicosensometrico_vigente
+   (boolean), compensacion_ordinaria, promedio_salarial_mensual,
+   eps_id (FK), fondo_pension_id (FK), funeraria, tiene_poliza_sura
+   (boolean), cuenta_bancaria, codigo_curso, nit_escuela,
+   numero_certificado_curso, rh_id (FK), sexo_al_nacer, genero_id
+   (FK), orientacion_sexual_id (FK), religion_id (FK), estado_civil,
+   numero_hijos, personas_a_cargo, tipo_vivienda, estrato,
+   nivel_estudio, rango_ingresos, raza_id (FK), plan_de_vida,
+   medio_transporte, tiempo_traslado, estado (enum: ACTIVO,
+   RETIRADO, SUSPENDIDO), created_at, updated_at.
+   Los campos edad_ingreso, edad_actual, antiguedad_empresa_anios y
+   antiguedad_cargo_anios deben ser CALCULADOS (no almacenados como
+   fuente de verdad, o recalculados por un job), nunca digitados
+   manualmente.
+
+2. Retiro: asociado_id (FK), ultimo_cargo, fecha_retiro,
+   motivo_retiro_id (FK), razon_retiro_id (FK), liquidacion_estado,
+   encuesta_ambiente_fisico (int 1-5), encuesta_induccion (int 1-5),
+   encuesta_reinduccion (int 1-5), encuesta_capacitacion (int 1-5),
+   encuesta_motivacion_grupo (int 1-5), encuesta_reconocimiento
+   (int 1-5), encuesta_compensaciones (int 1-5),
+   que_menos_le_gustaba (texto libre + catalogo opcional),
+   volveria_a_trabajar (enum SI/NO/NA), observaciones (texto),
+   created_at, updated_at. Bloquear edicion 30 dias despues de
+   creada salvo rol ADMIN.
+
+3. Cargo: nombre, es_critico (boolean), frecuencia_actualizacion_anios
+   (int), activo (boolean).
+
+4. CentroTrabajo: codigo, nombre_cliente, direccion, zona, activo.
+
+5. Catalogos maestros (tablas independientes o una tabla generica
+   "CatalogoValor" con campo "tipo"): EPS, FondoPension, Rh, Genero,
+   OrientacionSexual, Religion, Raza, MotivoRetiro, RazonRetiro,
+   MedioTransporte, TiempoTraslado, TipoVivienda, NivelEstudio,
+   RangoIngresos. Cada catalogo debe poder administrarse (CRUD)
+   solo por el rol ADMIN.
+
+6. DocumentoAsociado: asociado_id (FK), tipo_documento (enum:
+   CEDULA, CERTIFICADO_CURSO, EXAMEN_PSICOFISICO,
+   EXAMEN_PSICOSENSOMETRICO, POLIZA_SURA, CONTRATO, ACTA, OTRO),
+   archivo_url, fecha_vencimiento (nullable), fecha_carga,
+   cargado_por_usuario_id (FK).
+
+7. Alerta: asociado_id (FK), tipo_alerta (enum:
+   VENCIMIENTO_CURSO, VENCIMIENTO_PSICOFISICO,
+   VENCIMIENTO_PSICOSENSOMETRICO, VENCIMIENTO_POLIZA,
+   DOCUMENTO_FALTANTE), fecha_generacion, fecha_vencimiento,
+   estado (enum PENDIENTE, NOTIFICADA, RESUELTA),
+   asignado_a_usuario_id (FK, nullable).
+
+8. Usuario: nombre, correo (unico), hash_password, rol_id (FK),
+   activo (boolean), ultimo_login.
+
+9. Rol: nombre (ADMIN, GESTION_HUMANA, SST,
+   COORDINADOR_OPERATIVO, CONSULTA), permisos (JSON).
+
+10. Auditoria: usuario_id (FK), entidad, entidad_id, accion (enum
+    CREAR, EDITAR, ELIMINAR, EXPORTAR), campo_modificado,
+    valor_anterior, valor_nuevo, fecha, ip.
+
+REGLAS DE NEGOCIO A IMPLEMENTAR EN LA CAPA DE SERVICIOS:
+- edad_ingreso = anios entre fecha_nacimiento y fecha_ingreso.
+- edad_actual = anios entre fecha_nacimiento y hoy.
+- antiguedad_empresa_anios = anios entre fecha_ingreso y hoy (o
+  fecha_retiro si esta retirado).
+- Al marcar a un Asociado como RETIRADO: crear registro en Retiro
+  vinculado, cambiar Asociado.estado a RETIRADO, congelar el
+  calculo de antiguedad a la fecha de retiro, y habilitar el
+  formulario de encuesta de salida obligatoria.
+- El sistema debe correr un job diario (node-cron) que revise
+  fecha_vencimiento de examenes/cursos/polizas por asociado segun
+  su Cargo.frecuencia_actualizacion_anios, y genere una Alerta
+  cuando falten 60, 30 o 7 dias o menos, evitando duplicar alertas
+  ya generadas para el mismo vencimiento.
+- El numero_identificacion debe ser unico entre asociados con
+  estado ACTIVO; si un numero de identificacion ya existe como
+  RETIRADO, permitir "reingreso" que reactive el registro con un
+  nuevo numero_carpeta_actual en lugar de crear un duplicado.
+- Toda creacion, edicion o eliminacion relevante debe quedar
+  registrada en Auditoria con el valor anterior y nuevo por campo.
+
+CONTROL DE ACCESO (RBAC) A IMPLEMENTAR:
+- ADMIN: acceso total, incluida configuracion de catalogos,
+  reglas de frecuencia y gestion de usuarios.
+- GESTION_HUMANA: CRUD completo de Asociados y Retiros, ve todos
+  los campos incluidos los sensibles, genera reportes.
+- SST: gestion de examenes psicofisicos/psicosensometricos,
+  alertas de vencimiento y matriz de cumplimiento; no puede
+  editar datos personales no relacionados con salud ocupacional.
+- COORDINADOR_OPERATIVO: solo lectura de los asociados de sus
+  centros de trabajo asignados; los campos sensibles (religion,
+  orientacion sexual, raza) deben ocultarse para este rol.
+- CONSULTA: solo lectura de reportes agregados/anonimizados, sin
+  acceso a datos identificables de asociados individuales.
+
+MODULOS/PANTALLAS A CONSTRUIR EN EL FRONTEND:
+1. Login y gestion de sesion.
+2. Listado de Asociados con filtros (identificacion, nombre,
+   cargo, centro de trabajo, EPS, estado, cargo critico si/no,
+   rango de antiguedad) y busqueda en tiempo real.
+3. Ficha de Asociado (hoja de vida digital) con pestañas:
+   Datos personales, Datos laborales, Documentos adjuntos,
+   Historial de cambios de cargo, Alertas asociadas.
+4. Formulario de creacion/edicion de Asociado con validaciones
+   (identificacion unica, fechas coherentes, campos obligatorios).
+5. Flujo de Retiro: boton "Retirar asociado" que abre el
+   formulario de motivo/razon y luego la encuesta de salida de 7
+   preguntas de calificacion 1-5 mas 2 preguntas abiertas.
+6. Panel de Alertas activas, ordenado por urgencia (dias
+   restantes), con filtro por tipo de alerta y por centro de
+   trabajo.
+7. Matriz de cumplimiento normativo: tabla cruzada Asociado x
+   tipo de examen/curso x fecha ultimo x fecha proximo
+   vencimiento x estado (vigente/por vencer/vencido).
+8. Dashboard con graficas: total activos vs retirados,
+   distribucion por EPS, genero, rango de edad, estado civil,
+   nivel de estudio; top motivos de retiro; cargos con mas
+   vencimientos proximos; tendencia de rotacion mensual.
+9. Modulo de administracion de catalogos (solo ADMIN): CRUD de
+   Cargos, EPS, Fondos de Pension, Motivos y Razones de Retiro,
+   Centros de Trabajo, y demas catalogos.
+10. Modulo de usuarios y roles (solo ADMIN).
+11. Asistente de importacion desde Excel: permite subir el
+    archivo .xlsx (hojas INGRESOS, RETIROS, RETIROS DESDE NOV 2015,
+    RETIROS <2015), previsualiza los registros a importar, detecta
+    duplicados por numero_identificacion, muestra errores de
+    formato de fecha o campos vacios obligatorios, y solo confirma
+    la carga tras revision manual.
+12. Bitacora de auditoria (solo ADMIN), filtrable por usuario,
+    entidad y rango de fechas.
+
+REQUISITOS TECNICOS ADICIONALES:
+- Toda fecha debe validarse y normalizarse (el Excel origen tiene
+  inconsistencias como fechas guardadas como texto en formato
+  "dd/mm/aaaa" mezcladas con fechas seriales de Excel; el
+  importador debe detectar y convertir ambos casos).
+- Los campos de texto libre que en el Excel deberian haber sido
+  catalogos (ej. nombres de funeraria escritos de formas distintas
+  para el mismo valor) deben normalizarse a catalogos controlados
+  en el nuevo sistema; ofrece una pantalla de "mapeo de valores
+  libres a catalogo" durante la importacion.
+- Todas las contrasenas deben almacenarse con bcrypt (nunca en
+  texto plano).
+- Las respuestas de la API deben seguir un formato JSON consistente
+  con manejo de errores centralizado (middleware de errores).
+- Escribe pruebas unitarias para las reglas de negocio de calculo
+  de edades/antiguedad y para el motor de generacion de alertas.
+- Documenta los endpoints de la API (OpenAPI/Swagger opcional pero
+  recomendado).
+- Estructura el repositorio en monorepo con carpetas /backend y
+  /frontend, con scripts de arranque (npm run dev) documentados en
+  un README.md en espanol.
+
+ENTREGA ESPERADA:
+1. Backend Node.js/Express/Prisma funcional con migraciones de
+   base de datos, seed de catalogos maestros (usando los valores
+   listados en este documento), y endpoints REST para todos los
+   modulos descritos.
+2. Frontend React/Vite/Tailwind funcional y conectado al backend,
+   con las 12 pantallas descritas.
+3. Job de alertas diarias funcionando con node-cron.
+4. Script/asistente de importacion desde el Excel original.
+5. README.md con instrucciones de instalacion, variables de
+   entorno necesarias, y como ejecutar el proyecto localmente.
+
+Empieza por proponer el schema.prisma completo, luego la
+estructura de carpetas del backend, y despues procede modulo por
+modulo empezando por autenticacion y el modulo de Asociados.
+
+-----------------------------------------------------------------
+FIN DEL PROMPT
+-----------------------------------------------------------------
+
+=================================================================
+13. RIESGOS Y CONSIDERACIONES DE MIGRACION
+=================================================================
+
+  - El Excel origen tiene inconsistencias de captura (tildes,
+    mayusculas/minusculas, espacios sobrantes, valores libres que
+    deberian ser catalogo, ej. "SAN JUAN BAUTISTA" escrito de mas
+    de 5 formas distintas). El asistente de importacion (RF13)
+    debe incluir un paso de normalizacion/mapeo manual antes de
+    confirmar la carga masiva.
+  - Existen formulas rotas en la hoja RETIROS (valores #VALUE!)
+    que deben tratarse como datos faltantes, no como texto literal.
+  - Hay fechas mal capturadas como texto (ej. "15/010/1993") que
+    requieren limpieza manual antes o durante la migracion.
+  - Se recomienda migrar primero en un ambiente de pruebas y
+    validar conteos (total de activos, total de retirados por
+    ano) contra el Excel original antes de dar por cerrada la
+    migracion.
+
+=================================================================
+FIN DEL DOCUMENTO
+=================================================================

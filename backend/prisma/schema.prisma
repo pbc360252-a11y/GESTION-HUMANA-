@@ -1,0 +1,214 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Usuario {
+  id            String    @id @default(uuid())
+  nombre        String
+  correo        String    @unique
+  hashPassword  String
+  rol           String    // "ADMIN", "GESTION_HUMANA", "SST", "COORDINADOR_OPERATIVO", "CONSULTA"
+  activo        Boolean   @default(true)
+  ultimoLogin   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relaciones
+  auditorias    Auditoria[]
+  documentos    DocumentoAsociado[]
+  alertas       Alerta[]            @relation("AlertasAsignadas")
+}
+
+model Asociado {
+  id                            String    @id @default(uuid())
+  numeroCarpetaActual           Int?
+  acta                          String?
+  tipoDocumento                 String    // "CC", "CE", "PA"...
+  numeroIdentificacion          String    @unique
+  primerApellido                String
+  segundoApellido               String?
+  primerNombre                  String
+  segundoNombre                 String?
+  fechaNacimiento               DateTime
+  fechaExpedicionCedula         DateTime?
+  correoElectronico             String?
+  direccion                     String?
+  telefonoFijo                  String?
+  celular                       String    
+  contactoEmergenciaNombre      String?
+  contactoEmergenciaParentesco  String?
+  contactoEmergenciaTelefono    String?
+  fechaIngreso                  DateTime
+  psicofisicoVigente            Boolean   @default(false)
+  psicosensometricoVigente      Boolean   @default(false)
+  compensacionOrdinaria         Float     @default(0.0)
+  promedioSalarialMensual       Float     @default(0.0)
+  funeraria                     String?
+  tienePolizaSura               Boolean   @default(false)
+  cuentaBancaria                String?
+  codigoCurso                   String?
+  nitEscuela                    String?
+  numeroCertificadoCurso        String?
+  sexoAlNacer                   String?
+  estadoCivil                   String?
+  numeroHijos                   Int       @default(0)
+  personasACargo                Int       @default(0)
+  tipoVivienda                  String?
+  estrato                       Int?
+  nivelEstudio                  String?
+  rangoIngresos                 String?
+  planDeVida                    String?
+  medioTransporte               String?
+  tiempoTraslado                String?
+  estado                        String    @default("ACTIVO") // "ACTIVO", "RETIRADO", "SUSPENDIDO"
+  createdAt                     DateTime  @default(now())
+  updatedAt                     DateTime  @updatedAt
+
+  // Relaciones de Cargo y CentroTrabajo
+  cargoId                       String
+  cargo                         Cargo     @relation(fields: [cargoId], references: [id])
+  centroTrabajoId               String
+  centroTrabajo                 CentroTrabajo @relation(fields: [centroTrabajoId], references: [id])
+  
+  // Relaciones a catálogos maestros
+  epsId                         String?
+  eps                           CatalogoValor? @relation("AsociadoEPS", fields: [epsId], references: [id])
+  fondoPensionId                String?
+  fondoPension                  CatalogoValor? @relation("AsociadoFondo", fields: [fondoPensionId], references: [id])
+  rhId                          String?
+  rh                            CatalogoValor? @relation("AsociadoRH", fields: [rhId], references: [id])
+  generoId                      String?
+  genero                        CatalogoValor? @relation("AsociadoGenero", fields: [generoId], references: [id])
+  orientacionSexualId           String?
+  orientacionSexual             CatalogoValor? @relation("AsociadoOrientacion", fields: [orientacionSexualId], references: [id])
+  religionId                    String?
+  religion                      CatalogoValor? @relation("AsociadoReligion", fields: [religionId], references: [id])
+  razaId                        String?
+  raza                          CatalogoValor? @relation("AsociadoRaza", fields: [razaId], references: [id])
+
+  // Otras relaciones
+  retiros                       Retiro[]
+  documentos                    DocumentoAsociado[]
+  alertas                       Alerta[]
+  cambiosCargo                  HistorialCargo[]
+}
+
+model Retiro {
+  id                          String    @id @default(uuid())
+  asociadoId                  String
+  asociado                    Asociado  @relation(fields: [asociadoId], references: [id])
+  ultimoCargo                 String
+  fechaRetiro                 DateTime
+  liquidacionEstado           String    // "OK", "PENDIENTE", etc.
+  encuestaAmbienteFisico      Int       // 1 a 5
+  encuestaInduccion           Int       // 1 a 5
+  encuestaReinduccion         Int       // 1 a 5
+  encuestaCapacitacion        Int       // 1 a 5
+  encuestaMotivacionGrupo     Int       // 1 a 5
+  encuestaReconocimiento      Int       // 1 a 5
+  encuestaCompensaciones      Int       // 1 a 5
+  queMenosLeGustaba           String?
+  volveriaATrabajar           String    // "SI", "NO", "N-A"
+  edadAlRetiro                Float
+  observaciones               String?
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+
+  motivoRetiroId              String
+  motivoRetiro                CatalogoValor @relation("RetiroMotivo", fields: [motivoRetiroId], references: [id])
+  razonRetiroId               String
+  razonRetiro                 CatalogoValor @relation("RetiroRazon", fields: [razonRetiroId], references: [id])
+}
+
+model Cargo {
+  id                          String    @id @default(uuid())
+  nombre                      String    @unique
+  esCritico                   Boolean   @default(false)
+  frecuenciaActualizacionAnios Int      @default(2)
+  asociados                   Asociado[]
+  historiales                 HistorialCargo[]
+}
+
+model CentroTrabajo {
+  id            String     @id @default(uuid())
+  codigo        String     @unique
+  nombreCliente String
+  direccion     String?
+  zona          String?
+  activo        Boolean    @default(true)
+  asociados     Asociado[]
+}
+
+model CatalogoValor {
+  id          String     @id @default(uuid())
+  tipo        String     // "EPS", "FONDO_PENSION", "RH", "GENERO", "ORIENTACION_SEXUAL", "RELIGION", "RAZA", "MOTIVO_RETIRO", "RAZON_RETIRO", "MEDIO_TRANSPORTE", "TIEMPO_TRASLADO", "TIPO_VIVIENDA", "NIVEL_ESTUDIO", "RANGO_INGRESOS"
+  valor       String
+  activo      Boolean    @default(true)
+
+  // Relaciones inversas
+  asociadosEPS          Asociado[] @relation("AsociadoEPS")
+  asociadosFondo        Asociado[] @relation("AsociadoFondo")
+  asociadosRH           Asociado[] @relation("AsociadoRH")
+  asociadosGenero       Asociado[] @relation("AsociadoGenero")
+  asociadosOrientacion  Asociado[] @relation("AsociadoOrientacion")
+  asociadosReligion     Asociado[] @relation("AsociadoReligion")
+  asociadosRaza         Asociado[] @relation("AsociadoRaza")
+  
+  retirosMotivo         Retiro[]   @relation("RetiroMotivo")
+  retirosRazon          Retiro[]   @relation("RetiroRazon")
+
+  @@unique([tipo, valor])
+}
+
+model DocumentoAsociado {
+  id              String    @id @default(uuid())
+  asociadoId      String
+  asociado        Asociado  @relation(fields: [asociadoId], references: [id])
+  tipoDocumento   String    // "CEDULA", "CERTIFICADO_CURSO", "EXAMEN_PSICOFISICO", "EXAMEN_PSICOSENSOMETRICO", "POLIZA_SURA", "CONTRATO", "ACTA", "OTRO"
+  archivoUrl      String
+  fechaVencimiento DateTime?
+  fechaCarga      DateTime  @default(now())
+  cargadoPorId    String
+  cargadoPor      Usuario   @relation(fields: [cargadoPorId], references: [id])
+}
+
+model Alerta {
+  id              String    @id @default(uuid())
+  asociadoId      String
+  asociado        Asociado  @relation(fields: [asociadoId], references: [id])
+  tipoAlerta      String    // "VENCIMIENTO_CURSO", "VENCIMIENTO_PSICOFISICO", "VENCIMIENTO_PSICOSENSOMETRICO", "VENCIMIENTO_POLIZA", "DOCUMENTO_FALTANTE"
+  fechaGeneracion DateTime  @default(now())
+  fechaVencimiento DateTime
+  estado          String    @default("PENDIENTE") // "PENDIENTE", "RESUELTA"
+  asignadoAId     String?
+  asignadoA       Usuario?  @relation("AlertasAsignadas", fields: [asignadoAId], references: [id])
+}
+
+model HistorialCargo {
+  id            String    @id @default(uuid())
+  asociadoId    String
+  asociado      Asociado  @relation(fields: [asociadoId], references: [id])
+  cargoId       String
+  cargo         Cargo     @relation(fields: [cargoId], references: [id])
+  fechaCambio   DateTime  @default(now())
+  motivoCambio  String?
+}
+
+model Auditoria {
+  id              String    @id @default(uuid())
+  usuarioId       String
+  usuario         Usuario   @relation(fields: [usuarioId], references: [id])
+  entidad         String    // "Asociado", "Retiro", "Cargo", "CatalogoValor", etc.
+  entidadId       String
+  accion          String    // "CREAR", "EDITAR", "ELIMINAR", "EXPORTAR"
+  campoModificado String?
+  valorAnterior   String?
+  valorNuevo      String?
+  fecha           DateTime  @default(now())
+  ip              String?
+}
