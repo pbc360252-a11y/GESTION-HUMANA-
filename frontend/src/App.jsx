@@ -9,7 +9,8 @@ import {
   ChevronRight, 
   ChevronDown,
   User as UserIcon,
-  Bell
+  Bell,
+  CalendarDays
 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import AsociadosList from './components/AsociadosList';
@@ -19,6 +20,7 @@ import RetiroFlow from './components/RetiroFlow';
 import MatrixAndAlerts from './components/MatrixAndAlerts';
 import ExcelImporter from './components/ExcelImporter';
 import AdminPanel from './components/AdminPanel';
+import AusentismoPanel from './components/AusentismoPanel';
 
 export const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5000/api' : '/api';
 
@@ -113,6 +115,8 @@ function App() {
         return <RetiroFlow token={token} user={user} asociadoId={viewParams.id} navigateTo={navigateTo} />;
       case 'matriz':
         return <MatrixAndAlerts token={token} user={user} navigateTo={navigateTo} tabInicial={viewParams.tab || 'matriz'} />;
+      case 'ausentismo':
+        return <AusentismoPanel token={token} user={user} navigateTo={navigateTo} />;
       case 'importar':
         return <ExcelImporter token={token} user={user} navigateTo={navigateTo} />;
       case 'admin_catalogos':
@@ -272,6 +276,21 @@ function App() {
             <ShieldCheck size={18} />
             {isSidebarOpen && <span className="text-xs font-medium">Cumplimiento y Alertas</span>}
           </button>
+
+          {/* Ausentismo (excepto CONSULTA) */}
+          {user.rol !== 'CONSULTA' && (
+            <button
+              onClick={() => navigateTo('ausentismo')}
+              className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+                currentView === 'ausentismo'
+                  ? 'bg-[#123499] text-white border-l-4 border-[#d9a74a]'
+                  : 'text-[#eaedfa]/70 hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              <CalendarDays size={18} />
+              {isSidebarOpen && <span className="text-xs font-medium">Ausentismo</span>}
+            </button>
+          )}
 
           {/* Importador Excel (ADMIN y GESTION_HUMANA) */}
           {(user.rol === 'ADMIN' || user.rol === 'GESTION_HUMANA') && (

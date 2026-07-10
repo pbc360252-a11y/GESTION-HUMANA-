@@ -228,7 +228,8 @@ export default function AsociadoProfile({ token, user, asociadoId, navigateTo })
           { id: 'personales', label: 'Datos Personales', icon: User },
           { id: 'laborales', label: 'Laboral e Historial', icon: Briefcase },
           { id: 'documentos', label: 'Documentos Adjuntos', icon: FileText },
-          { id: 'alertas', label: 'Alertas y Notificaciones', icon: Bell }
+          { id: 'alertas', label: 'Alertas y Notificaciones', icon: Bell },
+          { id: 'ausentismos', label: 'Historial de Ausencias', icon: Calendar }
         ].map(tab => {
           const Icon = tab.icon;
           return (
@@ -537,6 +538,58 @@ export default function AsociadoProfile({ token, user, asociadoId, navigateTo })
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TABA: AUSENTISMOS */}
+        {activeTab === 'ausentismos' && (
+          <div className="space-y-4">
+            <h3 className="text-xs uppercase font-bold text-[#d9a74a] tracking-wider border-b border-white/5 pb-1">Historial de Ausencias e Incapacidades</h3>
+            {!asoc.ausentismos || asoc.ausentismos.length === 0 ? (
+              <p className="text-xs text-[#eaedfa]/50">No se registran eventos de ausentismo para este asociado.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-[#051650]/40 text-[#eaedfa]/80 uppercase tracking-wider text-[10px] font-semibold border-b border-white/10">
+                      <th className="p-3">Tipo</th>
+                      <th className="p-3">Evento</th>
+                      <th className="p-3">Fecha Inicio</th>
+                      <th className="p-3">Fecha Fin</th>
+                      <th className="p-3 text-center">Días</th>
+                      <th className="p-3">Detalle / CIE-10</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {asoc.ausentismos.map((aus) => (
+                      <tr key={aus.id} className="hover:bg-white/5 transition-colors">
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded-full font-semibold text-[9px] uppercase ${
+                            aus.tipo === 'MEDICO' ? 'bg-[#123499]/40 text-blue-300' : 'bg-[#d9a74a]/15 text-[#d9a74a]'
+                          }`}>
+                            {aus.tipo === 'MEDICO' ? 'Médico' : 'Administrativo'}
+                          </span>
+                        </td>
+                        <td className="p-3 text-white/70 font-semibold">{aus.tipoEvento}</td>
+                        <td className="p-3 text-white/70">{formatFecha(aus.fechaInicio)}</td>
+                        <td className="p-3 text-white/70">{formatFecha(aus.fechaFin)}</td>
+                        <td className="p-3 text-center text-white font-bold">{aus.diasAusencia}</td>
+                        <td className="p-3 text-white/80">
+                          {aus.tipo === 'MEDICO' && aus.diagnostico ? (
+                            <span className="flex items-center gap-1.5">
+                              <span className="font-semibold text-[#d9a74a]">{aus.diagnostico.codigo}</span>
+                              <span>- {aus.diagnostico.descripcion}</span>
+                            </span>
+                          ) : (
+                            <span>{aus.causa || aus.observaciones || 'Sin Causa Registrada'}</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

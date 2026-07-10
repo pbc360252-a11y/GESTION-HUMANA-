@@ -155,6 +155,10 @@ const getAsociadoById = async (req, res) => {
         cambiosCargo: {
           include: { cargo: true },
           orderBy: { fechaCambio: 'desc' }
+        },
+        ausentismos: {
+          include: { diagnostico: true },
+          orderBy: { fechaInicio: 'desc' }
         }
       }
     });

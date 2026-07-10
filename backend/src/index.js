@@ -15,6 +15,7 @@ const importRoutes = require('./routes/importRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const auditoriaRoutes = require('./routes/auditoriaRoutes');
 const usuarioRoutes = require('./routes/usuarioRoutes');
+const ausentismoRoutes = require('./routes/ausentismoRoutes');
 
 // Importar tareas programadas (Cron)
 const { iniciarCronAlertas } = require('./jobs/alertasCron');
@@ -42,6 +43,7 @@ app.use('/api/import', importRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/auditoria', auditoriaRoutes);
 app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/ausentismos', ausentismoRoutes);
 
 // Servir archivos estáticos del frontend compilado en producción
 if (process.env.NODE_ENV === 'production') {

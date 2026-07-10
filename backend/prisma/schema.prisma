@@ -97,6 +97,7 @@ model Asociado {
   documentos                    DocumentoAsociado[]
   alertas                       Alerta[]
   cambiosCargo                  HistorialCargo[]
+  ausentismos                   Ausentismo[]
 }
 
 model Retiro {
@@ -212,4 +213,43 @@ model Auditoria {
   valorNuevo      String?
   fecha           DateTime  @default(now())
   ip              String?
+}
+
+model DiagnosticoCIE10 {
+  id          String       @id @default(uuid())
+  codigo      String       @unique // Ej: "A000", "A083"
+  descripcion String       // Ej: "CIERTAS ENFERMEDADES INFECCIOSAS..."
+  ausentismos Ausentismo[]
+}
+
+model Ausentismo {
+  id                     String            @id @default(uuid())
+  asociadoId             String
+  asociado               Asociado          @relation(fields: [asociadoId], references: [id], onDelete: Cascade)
+  
+  // Categorización
+  tipo                   String            // "MEDICO" o "OTRO"
+  tipoEvento             String            // "D.A.", "S.P.", "L.R.", "L.N.R.", "ACT"
+  
+  // Fechas y Tiempos
+  fechaInicio            DateTime
+  fechaFin               DateTime
+  diasAusencia           Int
+  diasEnMes              Int?
+  
+  // Específico Médico
+  prorroga               Boolean           @default(false)
+  examenPostIncapacidad  Boolean           @default(false)
+  origenIncapacidad      String?           // "ENFERMEDAD GENERAL", "ACCIDENTE DE TRABAJO", etc.
+  diagnosticoId          String?
+  diagnostico            DiagnosticoCIE10? @relation(fields: [diagnosticoId], references: [id])
+  
+  // Específico Administrativo / Común
+  causa                  String?
+  observaciones          String?
+  salarioBase            Float?
+  costosAsumidosAT       Float?
+  
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
 }
