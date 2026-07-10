@@ -338,9 +338,11 @@ export default function AsociadoProfile({ token, user, asociadoId, navigateTo })
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between"><span className="text-[#eaedfa]/50">EPS:</span> <span className="font-semibold text-white">{asoc.eps ? asoc.eps.valor : 'No registrado'}</span></div>
                   <div className="flex justify-between"><span className="text-[#eaedfa]/50">Fondo Pensión:</span> <span className="font-semibold text-white">{asoc.fondoPension ? asoc.fondoPension.valor : 'No registrado'}</span></div>
+                  <div className="flex justify-between"><span className="text-[#eaedfa]/50">Cuenta Bancaria:</span> <span className="font-semibold text-white">{asoc.cuentaBancaria || 'N/A'}</span></div>
                   <div className="flex justify-between"><span className="text-[#eaedfa]/50">Funeraria:</span> <span className="font-semibold text-white">{asoc.funeraria || 'N/A'}</span></div>
                   <div className="flex justify-between"><span className="text-[#eaedfa]/50">Póliza SURA:</span> <span className="font-semibold text-white">{asoc.tienePolizaSura ? 'SÍ' : 'NO'}</span></div>
                   <div className="flex justify-between"><span className="text-[#eaedfa]/50">Código Curso Vigilancia:</span> <span className="font-semibold text-white">{asoc.codigoCurso || 'N/A'}</span></div>
+                  <div className="flex justify-between"><span className="text-[#eaedfa]/50">NIT Escuela:</span> <span className="font-semibold text-white">{asoc.nitEscuela || 'N/A'}</span></div>
                   <div className="flex justify-between"><span className="text-[#eaedfa]/50">N.º Certificado Escuela:</span> <span className="font-semibold text-white">{asoc.numeroCertificadoCurso || 'N/A'}</span></div>
                 </div>
               </div>

@@ -649,6 +649,53 @@ export default function AsociadoForm({ token, user, asociadoId, navigateTo }) {
           </div>
         </div>
 
+        {/* SECCIÓN 5: BENEFICIOS, CURSOS Y CONTROL SST */}
+        <div className="glass-panel p-6 rounded-xl border border-white/5 space-y-4">
+          <h3 className="text-xs uppercase font-bold text-[#d9a74a] tracking-wider border-b border-white/5 pb-1.5">5. Beneficios, Cursos y Control SST</h3>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-[10px] uppercase font-bold text-[#eaedfa]/60 mb-1">Funeraria</label>
+              <input type="text" name="funeraria" placeholder="Ej: Nazareno, Los Olivos" className="w-full bg-[#00072d]/60 border border-white/10 rounded-lg p-2.5 text-xs text-white focus:outline-none" value={formData.funeraria} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label className="block text-[10px] uppercase font-bold text-[#eaedfa]/60 mb-1">Cuenta Bancaria (Davivienda)</label>
+              <input type="text" name="cuentaBancaria" placeholder="Número de cuenta" className="w-full bg-[#00072d]/60 border border-white/10 rounded-lg p-2.5 text-xs text-white focus:outline-none" value={formData.cuentaBancaria} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label className="block text-[10px] uppercase font-bold text-[#eaedfa]/60 mb-1">Código del Curso</label>
+              <input type="text" name="codigoCurso" placeholder="Código del curso" className="w-full bg-[#00072d]/60 border border-white/10 rounded-lg p-2.5 text-xs text-white focus:outline-none" value={formData.codigoCurso} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label className="block text-[10px] uppercase font-bold text-[#eaedfa]/60 mb-1">NIT Escuela</label>
+              <input type="text" name="nitEscuela" placeholder="NIT de la Escuela" className="w-full bg-[#00072d]/60 border border-white/10 rounded-lg p-2.5 text-xs text-white focus:outline-none" value={formData.nitEscuela} onChange={handleChange} />
+            </div>
+
+            <div>
+              <label className="block text-[10px] uppercase font-bold text-[#eaedfa]/60 mb-1">N.º Certificado Escuela</label>
+              <input type="text" name="numeroCertificadoCurso" placeholder="Número de certificado" className="w-full bg-[#00072d]/60 border border-white/10 rounded-lg p-2.5 text-xs text-white focus:outline-none" value={formData.numeroCertificadoCurso} onChange={handleChange} />
+            </div>
+
+            <div className="flex items-center space-x-3 bg-[#00072d]/40 border border-white/5 rounded-lg p-2.5">
+              <input type="checkbox" id="tienePolizaSura" name="tienePolizaSura" checked={formData.tienePolizaSura} onChange={handleChange} className="rounded border-white/10 text-[#123499] focus:ring-0 focus:ring-offset-0" />
+              <label htmlFor="tienePolizaSura" className="text-[10px] uppercase font-bold text-[#eaedfa]/80 cursor-pointer">Póliza SURA</label>
+            </div>
+
+            <div className="flex items-center space-x-3 bg-[#00072d]/40 border border-white/5 rounded-lg p-2.5">
+              <input type="checkbox" id="psicofisicoVigente" name="psicofisicoVigente" checked={formData.psicofisicoVigente} onChange={handleChange} className="rounded border-white/10 text-[#123499] focus:ring-0 focus:ring-offset-0" />
+              <label htmlFor="psicofisicoVigente" className="text-[10px] uppercase font-bold text-[#eaedfa]/80 cursor-pointer">Psicofísico Vigente</label>
+            </div>
+
+            <div className="flex items-center space-x-3 bg-[#00072d]/40 border border-white/5 rounded-lg p-2.5">
+              <input type="checkbox" id="psicosensometricoVigente" name="psicosensometricoVigente" checked={formData.psicosensometricoVigente} onChange={handleChange} className="rounded border-white/10 text-[#123499] focus:ring-0 focus:ring-offset-0" />
+              <label htmlFor="psicosensometricoVigente" className="text-[10px] uppercase font-bold text-[#eaedfa]/80 cursor-pointer">Psicosensom. Vigente</label>
+            </div>
+          </div>
+        </div>
+
         {/* ACCIÓN GUARDAR */}
         <div className="flex justify-end gap-3 pb-6">
           <button
