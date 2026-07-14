@@ -48,10 +48,6 @@ function App() {
         })
         .then(data => {
           setUser(data);
-          // Si el usuario es CONSULTA, redirigirlo a dashboard ya que no puede ver asociados
-          if (data.rol === 'CONSULTA' && currentView === 'asociados') {
-            setCurrentView('dashboard');
-          }
         })
         .catch(err => {
           console.error(err);
@@ -249,20 +245,18 @@ function App() {
             {isSidebarOpen && <span className="text-xs font-medium">Panel Principal</span>}
           </button>
 
-          {/* Asociados (excepto CONSULTA) */}
-          {user.rol !== 'CONSULTA' && (
-            <button
-              onClick={() => navigateTo('asociados')}
-              className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                currentView === 'asociados' || currentView === 'asociado_detalle' || currentView === 'asociado_form' || currentView === 'retiro'
-                  ? 'bg-[#123499] text-white border-l-4 border-[#d9a74a]'
-                  : 'text-[#eaedfa]/70 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <Users size={18} />
-              {isSidebarOpen && <span className="text-xs font-medium">Asociados</span>}
-            </button>
-          )}
+          {/* Asociados */}
+          <button
+            onClick={() => navigateTo('asociados')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              currentView === 'asociados' || currentView === 'asociado_detalle' || currentView === 'asociado_form' || currentView === 'retiro'
+                ? 'bg-[#123499] text-white border-l-4 border-[#d9a74a]'
+                : 'text-[#eaedfa]/70 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <Users size={18} />
+            {isSidebarOpen && <span className="text-xs font-medium">Asociados</span>}
+          </button>
 
           {/* Matriz y Alertas */}
           <button
@@ -277,20 +271,18 @@ function App() {
             {isSidebarOpen && <span className="text-xs font-medium">Cumplimiento y Alertas</span>}
           </button>
 
-          {/* Ausentismo (excepto CONSULTA) */}
-          {user.rol !== 'CONSULTA' && (
-            <button
-              onClick={() => navigateTo('ausentismo')}
-              className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
-                currentView === 'ausentismo'
-                  ? 'bg-[#123499] text-white border-l-4 border-[#d9a74a]'
-                  : 'text-[#eaedfa]/70 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <CalendarDays size={18} />
-              {isSidebarOpen && <span className="text-xs font-medium">Ausentismo</span>}
-            </button>
-          )}
+          {/* Ausentismo */}
+          <button
+            onClick={() => navigateTo('ausentismo')}
+            className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-colors ${
+              currentView === 'ausentismo'
+                ? 'bg-[#123499] text-white border-l-4 border-[#d9a74a]'
+                : 'text-[#eaedfa]/70 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <CalendarDays size={18} />
+            {isSidebarOpen && <span className="text-xs font-medium">Ausentismo</span>}
+          </button>
 
           {/* Importador Excel (ADMIN y GESTION_HUMANA) */}
           {(user.rol === 'ADMIN' || user.rol === 'GESTION_HUMANA') && (

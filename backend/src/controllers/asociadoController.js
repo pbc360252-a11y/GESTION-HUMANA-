@@ -22,11 +22,6 @@ const filtrarCamposSensibles = (asociado, rol) => {
 const getAsociados = async (req, res) => {
   try {
     const { rol } = req.user;
-    
-    // El rol CONSULTA no puede ver listas individuales de asociados
-    if (rol === 'CONSULTA') {
-      return res.status(403).json({ mensaje: 'No tiene permisos para ver el listado de asociados' });
-    }
 
     const { 
       busqueda, 
@@ -118,10 +113,6 @@ const getAsociadoById = async (req, res) => {
   try {
     const { id } = req.params;
     const { rol, id: usuarioId } = req.user;
-
-    if (rol === 'CONSULTA') {
-      return res.status(403).json({ mensaje: 'No tiene permisos para ver la ficha del asociado' });
-    }
 
     const asociado = await prisma.asociado.findUnique({
       where: { id },

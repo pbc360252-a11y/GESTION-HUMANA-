@@ -93,10 +93,6 @@ const getRetiroByAsociadoId = async (req, res) => {
     const { asociadoId } = req.params;
     const { rol } = req.user;
 
-    if (rol === 'CONSULTA') {
-      return res.status(403).json({ mensaje: 'No tiene permisos para ver detalles de retiro' });
-    }
-
     const retiro = await prisma.retiro.findFirst({
       where: { asociadoId },
       include: {
