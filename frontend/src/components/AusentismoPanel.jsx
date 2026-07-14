@@ -347,7 +347,7 @@ export default function AusentismoPanel({ token, user, navigateTo }) {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-white font-display">Control de Ausentismo</h1>
-          <p className="text-sm text-[#eaedfa]/60 mt-1">Registra, analiza y procesa incapacidades, licencias, vacaciones y permisos.</p>
+          <p className="text-sm text-[#eaedfa]/60 mt-1">Registra, analiza y procesa incapacidades, licencias, vacaciones, permisos y suspensiones.</p>
         </div>
         {user.rol !== 'CONSULTA' && (
           <div className="flex gap-3">
@@ -432,6 +432,7 @@ export default function AusentismoPanel({ token, user, navigateTo }) {
                 <option value="">Todos los Tipos</option>
                 <option value="MEDICO">Incapacidades Médicas</option>
                 <option value="OTRO">Permisos y Licencias</option>
+                <option value="SUSPENSION">Suspensiones</option>
               </select>
             </div>
           </div>
@@ -470,11 +471,13 @@ export default function AusentismoPanel({ token, user, navigateTo }) {
                         </td>
                         <td className="p-4 text-white/70">{aus.asociado?.numeroIdentificacion}</td>
                         <td className="p-4">
-                          <span className={`px-2.5 py-0.5 rounded-full font-semibold text-[9px] uppercase ${
-                            aus.tipo === 'MEDICO' ? 'bg-[#123499]/40 text-blue-300 border border-blue-500/20' : 'bg-[#d9a74a]/15 text-[#d9a74a] border border-[#d9a74a]/20'
-                          }`}>
-                            {aus.tipo === 'MEDICO' ? 'Médico' : 'Administrativo'}
-                          </span>
+                           <span className={`px-2.5 py-0.5 rounded-full font-semibold text-[9px] uppercase ${
+                             aus.tipo === 'MEDICO' ? 'bg-[#123499]/40 text-blue-300 border border-blue-500/20' 
+                             : aus.tipo === 'SUSPENSION' ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                             : 'bg-[#d9a74a]/15 text-[#d9a74a] border border-[#d9a74a]/20'
+                           }`}>
+                             {aus.tipo === 'MEDICO' ? 'Médico' : aus.tipo === 'SUSPENSION' ? 'Suspensión' : 'Administrativo'}
+                           </span>
                         </td>
                         <td className="p-4 text-white/70 font-semibold">{aus.tipoEvento}</td>
                         <td className="p-4 text-white/70">{new Date(aus.fechaInicio).toLocaleDateString()}</td>
@@ -731,6 +734,7 @@ export default function AusentismoPanel({ token, user, navigateTo }) {
                   >
                     <option value="MEDICO">Incapacidad Médica</option>
                     <option value="OTRO">Permiso, Licencia o Vacaciones</option>
+                    <option value="SUSPENSION">Suspensión</option>
                   </select>
                 </div>
               </div>
@@ -857,6 +861,41 @@ export default function AusentismoPanel({ token, user, navigateTo }) {
                       onChange={(e) => setCausa(e.target.value)}
                       className="w-full bg-[#051650]/40 border border-white/10 rounded-lg p-2.5 text-xs text-white focus:outline-none"
                     />
+                  </div>
+                </div>
+              )}
+
+              {/* Campos condicionales: SUSPENSIÓN */}
+              {tipo === 'SUSPENSION' && (
+                <div className="space-y-4 border-t border-red-500/20 pt-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="h-2 w-2 rounded-full bg-red-400"></div>
+                    <span className="text-[10px] uppercase tracking-wider text-red-300 font-semibold">Datos de la Suspensión</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wider text-white/70 mb-1.5 font-medium">Motivo de la Suspensión</label>
+                      <input
+                        type="text"
+                        placeholder="Ej: Falta disciplinaria, sanción, suspensión preventiva..."
+                        value={causa}
+                        onChange={(e) => setCausa(e.target.value)}
+                        className="w-full bg-[#051650]/40 border border-red-500/20 rounded-lg p-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-red-400/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wider text-white/70 mb-1.5 font-medium">Tipo de Suspensión</label>
+                      <select
+                        value={tipoEvento}
+                        onChange={(e) => setTipoEvento(e.target.value)}
+                        className="w-full bg-[#051650]/40 border border-red-500/20 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-red-400/50"
+                      >
+                        <option value="DISCIPLINARIA">Disciplinaria</option>
+                        <option value="PREVENTIVA">Preventiva</option>
+                        <option value="ADMINISTRATIVA">Administrativa</option>
+                        <option value="ACT">Otra</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               )}
