@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 // Importar rutas
 const authRoutes = require('./routes/authRoutes');
@@ -31,6 +32,17 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Servir archivos subidos de forma estática
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Ruta pública keep-alive para evitar pausa de Supabase y mantener Render activo
+app.get('/api/public/keep-alive', async (req, res) => {
+  try {
+    await prisma.$executeRaw`SELECT 1`;
+    res.json({ estado: 'activo', database: 'conectada', fecha: new Date() });
+  } catch (error) {
+    console.error('[KEEP-ALIVE ERROR]', error);
+    res.status(500).json({ estado: 'error', database: 'desconectada', error: error.message });
+  }
+});
 
 // Registro de endpoints de la API
 app.use('/api/auth', authRoutes);
@@ -79,11 +91,9 @@ app.listen(PORT, async () => {
   console.log(`==================================================`);
 
   // Probar conexión a la base de datos al arrancar
-  const prisma = new PrismaClient();
   try {
     await prisma.$connect();
     console.log(`[DB] ✅ Conexión a la base de datos exitosa`);
-    await prisma.$disconnect();
   } catch (error) {
     console.error(`[DB] ❌ Error de conexión a la base de datos:`, error.message);
   }
