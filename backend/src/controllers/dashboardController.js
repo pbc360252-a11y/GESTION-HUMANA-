@@ -7,25 +7,25 @@ const getDashboardStats = async (req, res) => {
   try {
     const { rol } = req.user;
 
-    // Obtener asociados y retiros
-    const asociados = await prisma.asociado.findMany({
+    // 1. Obtener asociados activos únicamente (mucho más rápido)
+    const asociadosActivos = await prisma.asociado.findMany({
+      where: { estado: 'ACTIVO' },
       include: {
         cargo: true,
         centroTrabajo: true,
         eps: true,
-        genero: true,
-        retiros: true
+        genero: true
       }
     });
 
-    const totalActivos = asociados.filter(a => a.estado === 'ACTIVO').length;
-    const totalSuspendidos = asociados.filter(a => a.estado === 'SUSPENDIDO').length;
-    const totalRetirados = asociados.filter(a => a.estado === 'RETIRADO').length;
+    // 2. Obtener conteos de los demás estados de forma directa
+    const totalActivos = asociadosActivos.length;
+    const totalSuspendidos = await prisma.asociado.count({ where: { estado: 'SUSPENDIDO' } });
+    const totalRetirados = await prisma.asociado.count({ where: { estado: 'RETIRADO' } });
+    const totalAsociados = await prisma.asociado.count();
 
-    // Calcular campos derivados en memoria
-    const activosDerivados = asociados
-      .filter(a => a.estado === 'ACTIVO')
-      .map(a => calcularCamposDerivados(a));
+    // Calcular campos derivados en memoria solo para los activos
+    const activosDerivados = asociadosActivos.map(a => calcularCamposDerivados(a));
 
     // 1. Distribución por Rangos de Edad (Activos)
     const rangosEdad = { '<25': 0, '25-34': 0, '35-44': 0, '45-54': 0, '55+': 0 };
@@ -51,41 +51,49 @@ const getDashboardStats = async (req, res) => {
 
     // 3. Distribución por EPS (Activos)
     const epsDist = {};
-    asociados.filter(a => a.estado === 'ACTIVO').forEach(a => {
+    asociadosActivos.forEach(a => {
       const nombreEps = a.eps ? a.eps.valor : 'SIN REGISTRO';
       epsDist[nombreEps] = (epsDist[nombreEps] || 0) + 1;
     });
 
     // 4. Distribución por Género (Activos)
     const generoDist = {};
-    asociados.filter(a => a.estado === 'ACTIVO').forEach(a => {
+    asociadosActivos.forEach(a => {
       const gen = a.genero ? a.genero.valor : 'SIN REGISTRO';
       generoDist[gen] = (generoDist[gen] || 0) + 1;
     });
 
     // 5. Distribución por Nivel de Estudios (Activos)
     const estudiosDist = {};
-    asociados.filter(a => a.estado === 'ACTIVO').forEach(a => {
+    asociadosActivos.forEach(a => {
       const nivel = a.nivelEstudio || 'SIN REGISTRO';
       estudiosDist[nivel] = (estudiosDist[nivel] || 0) + 1;
     });
 
     // 6. Distribución por Estado Civil (Activos)
     const estadoCivilDist = {};
-    asociados.filter(a => a.estado === 'ACTIVO').forEach(a => {
+    asociadosActivos.forEach(a => {
       const est = a.estadoCivil || 'SIN REGISTRO';
       estadoCivilDist[est] = (estadoCivilDist[est] || 0) + 1;
     });
 
-    // 7. Top Motivos de Retiro (Todos los retiros)
-    const retiros = await prisma.retiro.findMany({
-      include: { motivoRetiro: true, razonRetiro: true }
+    // 7. Top Motivos de Retiro (Agrupado en la base de datos)
+    const retirosGrouped = await prisma.retiro.groupBy({
+      by: ['motivoRetiroId'],
+      _count: {
+        id: true
+      }
     });
 
+    const catalogosMotivos = await prisma.catalogoValor.findMany({
+      where: { tipo: 'MOTIVO_RETIRO' }
+    });
+    const motivosMap = new Map(catalogosMotivos.map(c => [c.id, c.valor]));
+
     const motivosRetiroDist = {};
-    retiros.forEach(r => {
-      const mot = r.motivoRetiro ? r.motivoRetiro.valor : 'OTRO';
-      motivosRetiroDist[mot] = (motivosRetiroDist[mot] || 0) + 1;
+    retirosGrouped.forEach(rg => {
+      const val = motivosMap.get(rg.motivoRetiroId) || 'OTRO';
+      motivosRetiroDist[val] = (motivosRetiroDist[val] || 0) + rg._count.id;
     });
 
     // 8. Vencimientos Próximos (Alertas activas por tipo)
@@ -106,23 +114,34 @@ const getDashboardStats = async (req, res) => {
       }
     });
 
-    // 9. Cálculo de Rotación de Personal (Últimos 6 meses)
+    // 9. Cálculo de Rotación de Personal (Últimos 6 meses) - Filtrado rápido en BD
     const rotacionMensual = [];
     const hoy = new Date();
+    const seisMesesAtras = new Date(hoy.getFullYear(), hoy.getMonth() - 5, 1);
+
+    const retirosRecientes = await prisma.retiro.findMany({
+      where: {
+        fechaRetiro: {
+          gte: seisMesesAtras
+        }
+      },
+      select: {
+        fechaRetiro: true
+      }
+    });
     
     for (let i = 5; i >= 0; i--) {
       const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
       const anio = d.getFullYear();
-      const mes = d.getMonth(); // 0-11
+      const mes = d.getMonth();
       const mesNombre = d.toLocaleString('es-ES', { month: 'short' }).toUpperCase();
 
-      // Retiros en este mes/año
-      const retirosMes = retiros.filter(r => {
+      // Retiros en este mes/año de la muestra pequeña
+      const retirosMes = retirosRecientes.filter(r => {
         const fr = new Date(r.fechaRetiro);
         return fr.getFullYear() === anio && fr.getMonth() === mes;
       }).length;
 
-      // Activos en ese momento (estimado con el total de activos actual para simplificar)
       const activosMomento = totalActivos || 1; 
       const tasaRotacion = parseFloat(((retirosMes / activosMomento) * 100).toFixed(2));
 
@@ -138,7 +157,7 @@ const getDashboardStats = async (req, res) => {
         totalActivos,
         totalSuspendidos,
         totalRetirados,
-        totalRegistros: asociados.length
+        totalRegistros: totalAsociados
       },
       demograficos: {
         rangosEdad,
