@@ -1,0 +1,33 @@
+name: Mantener Supabase Activa (Keep-Alive)
+
+on:
+  schedule:
+    # Se ejecuta cada 3 días a las 12:00 UTC (Suficiente para que Supabase nunca se pause)
+    - cron: '0 12 */3 * *'
+  workflow_dispatch: # Permite ejecutar el flujo manualmente desde GitHub
+
+jobs:
+  ping-supabase:
+    name: Consulta Directa a Supabase
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias del backend
+        run: |
+          cd backend
+          npm install --production=false
+          npx prisma generate
+
+      - name: Ejecutar consulta Keep-Alive en Supabase
+        env:
+          DATABASE_URL: "postgresql://postgres.uqogrjkgbvcehdikflcm:Freider1004*@aws-1-us-east-2.pooler.supabase.com:5432/postgres"
+        run: |
+          cd backend
+          node -e "const { PrismaClient } = require('@prisma/client'); const p = new PrismaClient(); p.\$executeRaw\`SELECT 1\`.then(() => { console.log('✅ [EXITO] Consulta realizada. Supabase permanecera activa.'); p.\$disconnect(); }).catch(e => { console.error('❌ Error:', e); process.exit(1); });"
